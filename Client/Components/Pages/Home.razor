@@ -1,0 +1,52 @@
+﻿@using Client.Api.Generated;
+@using MudBlazor
+@inject Net80 ApiClient;
+@inject ISnackbar Snackbar;
+@page "/"
+
+<PageTitle>Home</PageTitle>
+@if (_isLoading) 
+{
+    <MudContainer Gutters="false" Class="d-flex align-center justify-center">
+        <MudProgressCircular Indeterminate Color="Color.Primary" />
+    </MudContainer>
+}
+else 
+{
+    <MudTable Items="_forecasts">
+        <HeaderContent>
+            <MudTh>Summary</MudTh>
+            <MudTh>DateStamp</MudTh>
+            <MudTh>Temperature</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Summary</MudTd>
+            <MudTd>@context.Date.ToString("MM/dd/yyyy hh:mm:ss tt")</MudTd>
+            <MudTd>@context.TemperatureF</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private List<WeatherForecast> _forecasts = [];
+    private bool _isLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) 
+    {
+        if (!firstRender) return;
+
+        try
+        {
+            var forecasts = await ApiClient.GetAsync();
+            _forecasts = forecasts.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Could not retrieve forecasts.", Severity.Error);
+            Console.WriteLine(ex);
+        }
+
+        _isLoading = false;
+       await InvokeAsync(StateHasChanged);
+    }
+}

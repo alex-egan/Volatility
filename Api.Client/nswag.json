@@ -1,0 +1,20 @@
+{
+    "runtime": "Net100",
+    "documentGenerator": {
+      "aspNetCoreToOpenApi": {
+        "project": "../Api/Api.csproj"
+      }
+    },
+    "codeGenerators": {
+      "openApiToCSharpClient": {
+        "className": "Net80",
+        "namespace": "Client.Api.Generated",
+        "output": "Generated/Net80.cs",
+        "generateClientInterfaces": true,
+        "useHttpClientCreationMethod": false,
+        "injectHttpClient": true,
+        "disposeHttpClient": false,
+        "useBaseUrl": false
+      }
+    }
+  }
