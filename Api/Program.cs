@@ -1,7 +1,20 @@
+using Api.Models.Database;
+using Api.Services;
+using Api.Workers;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<DBContext>(options =>
+    options.UseSqlite(builder.Configuration["ConnectionString"]),
+    ServiceLifetime.Scoped);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+builder.Services.AddHostedService<BeverageWorker>();
+
+builder.Services.AddScoped<BeverageService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();

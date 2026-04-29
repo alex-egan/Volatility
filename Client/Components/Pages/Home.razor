@@ -13,22 +13,30 @@
 }
 else 
 {
-    <MudTable Items="_forecasts">
+    <MudTable Items="_beverages">
         <HeaderContent>
-            <MudTh>Summary</MudTh>
-            <MudTh>DateStamp</MudTh>
-            <MudTh>Temperature</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Code</MudTh>
+            <MudTh>Current Price</MudTh>
+            <MudTh>
+                <MudIconButton OnClick="CreateDrinkAsync" Icon="@Icons.Material.Filled.Add" />
+            </MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd>@context.Summary</MudTd>
-            <MudTd>@context.Date.ToString("MM/dd/yyyy hh:mm:ss tt")</MudTd>
-            <MudTd>@context.TemperatureF</MudTd>
+            <MudTd>@context.Name</MudTd>
+            <MudTd>@context.Code</MudTd>
+            <MudTd>@context.Price.ToString("0.00")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Money" OnClick="@(async () => await PurchaseAsync(context.Id))" />
+            </MudTd>
         </RowTemplate>
     </MudTable>
+
+    <MudButton OnClick="CreateDrinkAsync">Create Drink</MudButton>
 }
 
 @code {
-    private List<WeatherForecast> _forecasts = [];
+    private List<Beverage> _beverages = [];
     private bool _isLoading = true;
 
     protected override async Task OnAfterRenderAsync(bool firstRender) 
@@ -37,8 +45,8 @@ else
 
         try
         {
-            var forecasts = await ApiClient.GetAsync();
-            _forecasts = forecasts.ToList();
+            ICollection<Beverage> beverages = await ApiClient.GetAsync();
+            _beverages = beverages.ToList();
         }
         catch (Exception ex)
         {
@@ -48,5 +56,48 @@ else
 
         _isLoading = false;
        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CreateDrinkAsync() 
+    {
+        Beverage beverage = new() 
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Beer",
+            Code = "Test",
+            Type = BeverageType.Beer,
+            Price = 6.50m,
+            AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ]
+        };
+
+        try 
+        {
+            await ApiClient.CreateAsync(beverage);
+        }
+        catch (Exception exception) 
+        {
+            Snackbar.Add($"Could not save beverage: {exception}");
+            Console.WriteLine(exception);
+            return;
+        }
+        
+        _beverages.Add(beverage);
+        Snackbar.Add($"Beverage {beverage.Name} successfully created.");
+        StateHasChanged();
+    }
+
+    private async Task PurchaseAsync(Guid id) 
+    {
+        try 
+        {
+            Beverage updated = await ApiClient.PurchaseAsync(id);
+            int index = _beverages.FindIndex(b => b.Id == updated.Id);
+            _beverages[index] = updated;
+            StateHasChanged();
+        } 
+        catch (Exception exception) 
+        {
+            Console.WriteLine($"Exception encountered: {exception}");
+        }
     }
 }
