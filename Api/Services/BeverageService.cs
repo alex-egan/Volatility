@@ -12,9 +12,9 @@ public class BeverageService(DBContext context)
         return await _beverages.ToListAsync();
     }
 
-    public async Task Create(Beverage beverage) 
+    public async Task CreateAsync(Beverage beverage) 
     {
-        beverage.NextPriceDropAt = DateTime.Now.AddMinutes(1);
+        beverage.NextPriceDropAt = DateTime.UtcNow.AddSeconds(30);
         await _beverages.AddAsync(beverage);
         await context.SaveChangesAsync();
     }
@@ -40,6 +40,7 @@ public class BeverageService(DBContext context)
 
     public async Task OnBeverageTimerExpired() 
     {
+        Console.WriteLine($"Dropping Prices: {DateTime.Now:MM/dd/yyyy mm:hh:ss tt}");
         await context.Database.ExecuteSqlRawAsync(@"
             UPDATE Beverages
             SET 

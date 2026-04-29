@@ -19,7 +19,7 @@ public class BeverageController(BeverageService beverageService) : ControllerBas
     [HttpPost(Name = "Create")]
     public async Task CreateAsync(Beverage beverage)
     {
-        await _beverageService.Create(beverage);
+        await _beverageService.CreateAsync(beverage);
     }
 
     [HttpPut(Name = "Purchase")]

@@ -1,5 +1,4 @@
 
-using Api.Models.Database;
 using Api.Services;
 
 namespace Api.Workers;
@@ -24,7 +23,7 @@ public class BeverageWorker(IServiceScopeFactory scopeFactory) : BackgroundServi
                 Console.WriteLine($"Could not perform the timer expired update: {exception}");
             }
 
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(5000, stoppingToken);
         }
     }
 }
