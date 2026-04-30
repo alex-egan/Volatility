@@ -1,4 +1,5 @@
 using Api.Models.Database;
+using Api.Models.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
@@ -6,6 +7,7 @@ namespace Api.Services;
 public class BeverageService(DBContext context) 
 {
     private readonly DbSet<Beverage> _beverages = context.Beverages;
+    private readonly DbSet<BeverageEvent> _events = context.BeverageEvents;
 
     public async Task<List<Beverage>> GetAsync() 
     {
@@ -16,14 +18,24 @@ public class BeverageService(DBContext context)
     public async Task<Beverage?> GetByIdAsync(Guid id) 
     {
         return await _beverages
+            .Include(b => b.Events)
             .FirstOrDefaultAsync(b => b.Id == id);
     }
 
     public async Task CreateAsync(Beverage beverage) 
     {
         beverage.Active = true;
-        beverage.NextPriceDropAt = DateTime.UtcNow.AddSeconds(30);
+        beverage.NextPriceDropAt = DateTime.UtcNow.AddMinutes(5);
+
+        BeverageEvent @event = new() {
+            BeverageId = beverage.Id,
+            Type = BeverageEventType.Created.Value,
+            Price = beverage.Price,
+            PerformedOn = DateTime.UtcNow
+        };
+
         await _beverages.AddAsync(beverage);
+        await _events.AddAsync(@event);
         await context.SaveChangesAsync();
     }
 
@@ -32,8 +44,8 @@ public class BeverageService(DBContext context)
         Beverage beverage = await _beverages.FirstOrDefaultAsync(b => b.Id == id)
             ?? throw new Exception($"Could not retrieve beverage with Id {id}.");
         
-        beverage.Price *= 1.1m;
-        beverage.NextPriceDropAt = DateTime.UtcNow.AddMinutes(1);
+        beverage.Price = Math.Round(beverage.Price * 1.1m, 2);
+        beverage.NextPriceDropAt = DateTime.UtcNow.AddSeconds(10);
 
         await context.Database.ExecuteSqlInterpolatedAsync($@"
             UPDATE Beverages
@@ -42,6 +54,16 @@ public class BeverageService(DBContext context)
                 NextPriceDropAt = {beverage.NextPriceDropAt}
             WHERE Id = {id}
         ");
+
+        BeverageEvent @event = new() {
+            BeverageId = beverage.Id,
+            Type = BeverageEventType.Purchase.Value,
+            Price = beverage.Price,
+            PerformedOn = DateTime.UtcNow
+        };
+
+        await _events.AddAsync(@event);
+        await context.SaveChangesAsync();
 
         return beverage;
     }
@@ -52,11 +74,12 @@ public class BeverageService(DBContext context)
         await context.Database.ExecuteSqlRawAsync(@"
             UPDATE Beverages
             SET 
-                Price = Price * 0.9,
-                NextPriceDropAt = datetime(NextPriceDropAt, '+2 minutes')
+                Price = ROUND(Price * 0.9, 2),
+                NextPriceDropAt = datetime(CURRENT_TIMESTAMP, '+10 seconds')
             WHERE 
                 Active = true 
-                AND NextPriceDropAt <= CURRENT_TIMESTAMP;
+                AND NextPriceDropAt <= CURRENT_TIMESTAMP
+                AND Price > 1;
         ");
     }
 

@@ -13,7 +13,7 @@
 }
 else 
 {
-    <MudTable Items="_beverages">
+    <MudTable Items="_beverages" OnRowClick="@(async (TableRowClickEventArgs<Beverage> args) => await OpenBeverageAsync(args.Item!.Id))">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Code</MudTh>
@@ -33,11 +33,31 @@ else
             </MudTd>
         </RowTemplate>
     </MudTable>
+
+    @if (_selectedBeverage != null) 
+    {
+        <MudContainer Gutters="false" Class="d-flex flex-column mb-2">
+            <MudText Typo="Typo.h4">@_selectedBeverage.Name</MudText>
+        </MudContainer>
+        <MudContainer Gutters="false" Class="d-flex ma-4">
+            <MudChart T="decimal" ChartType="ChartType.Line" ChartOptions="_options" ChartSeries="_series" />
+        </MudContainer>
+    }
 }
 
 @code {
     private List<Beverage> _beverages = [];
     private bool _isLoading = true;
+    private Beverage? _selectedBeverage = null;
+
+    private LineChartOptions _options = new LineChartOptions()
+    {
+        XAxisTitle = "Dates",
+        YAxisTitle = "Price",
+        ShowDataMarkers = true
+    };
+
+    private List<ChartSeries<decimal>> _series = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender) 
     {
@@ -46,7 +66,6 @@ else
         try
         {
             ICollection<Beverage> beverages = (await ApiClient.GetAsync()).OrderBy(b => b.Active.ToString()).ToList();
-            
             _beverages = beverages.ToList();
         }
         catch (Exception ex)
@@ -86,6 +105,28 @@ else
         _beverages.Add(beverage);
         Snackbar.Add($"Beverage {beverage.Name} successfully created.");
         StateHasChanged();
+    }
+
+    private async Task OpenBeverageAsync(Guid id) 
+    {
+        _selectedBeverage = null;
+
+        try 
+        {
+            _selectedBeverage = await ApiClient.GetByIdAsync(id);
+            IEnumerable<BeverageEvent> events = _selectedBeverage.Events.OrderBy(e => e.PerformedOn);
+            decimal[] series = events.Select(e => (Math.Truncate(e.Price * 100) / 100)).ToArray();
+            
+            _series = [
+                new() { Name = _selectedBeverage.Name, Data = series }
+            ];
+
+            StateHasChanged();
+        }
+        catch (Exception exception) 
+        {
+            Snackbar.Add($"Could not retrieve beverage {id}, {exception}", Severity.Error);
+        }
     }
 
     private async Task PurchaseAsync(Guid id) 

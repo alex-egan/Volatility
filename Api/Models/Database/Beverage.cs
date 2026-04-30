@@ -21,4 +21,6 @@ public partial class Beverage : IBeverage
     public DateTime CreatedOn { get; set; }
     public string UpdatedBy { get; set; } = string.Empty;
     public DateTime UpdatedOn { get; set; }
+
+    public List<BeverageEvent> Events { get; set; } = [];
 }
