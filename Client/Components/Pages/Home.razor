@@ -27,7 +27,8 @@ else
             <MudTd>@context.Code</MudTd>
             <MudTd>@context.Price.ToString("0.00")</MudTd>
             <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Money" OnClick="@(async () => await PurchaseAsync(context.Id))" />
+                <MudIconButton Variant="Variant.Filled" Icon="@Icons.Material.Filled.Money" OnClick="@(async () => await PurchaseAsync(context.Id))" />
+                <MudIconButton Variant="Variant.Filled" Color="Color.Error" Icon="@Icons.Material.Filled.Cancel" OnClick="@(async () => await DeactivateAsync(context.Id))" />
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -98,6 +99,22 @@ else
         catch (Exception exception) 
         {
             Console.WriteLine($"Exception encountered: {exception}");
+        }
+    }
+
+    private async Task DeactivateAsync(Guid id) 
+    {
+        try 
+        {
+            await ApiClient.DeactivateAsync(id);
+            int index = _beverages.FindIndex(b => b.Id == id);
+            _beverages.RemoveAt(index);
+            Snackbar.Add("Successfully deactivated beverage.");
+            StateHasChanged();
+        }
+        catch (Exception exception) 
+        {
+            Snackbar.Add($"Unable to deactivate beverage: {exception}", Severity.Error);
         }
     }
 }

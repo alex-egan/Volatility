@@ -9,11 +9,20 @@ public class BeverageService(DBContext context)
 
     public async Task<List<Beverage>> GetAsync() 
     {
-        return await _beverages.ToListAsync();
+        return await _beverages
+            .Where(b => b.Active)
+            .ToListAsync();
+    }
+
+    public async Task<Beverage?> GetByIdAsync(Guid id) 
+    {
+        return await _beverages
+            .FirstOrDefaultAsync(b => b.Id == id);
     }
 
     public async Task CreateAsync(Beverage beverage) 
     {
+        beverage.Active = true;
         beverage.NextPriceDropAt = DateTime.UtcNow.AddSeconds(30);
         await _beverages.AddAsync(beverage);
         await context.SaveChangesAsync();
@@ -46,7 +55,20 @@ public class BeverageService(DBContext context)
             SET 
                 Price = Price * 0.9,
                 NextPriceDropAt = datetime(NextPriceDropAt, '+2 minutes')
-            WHERE NextPriceDropAt <= CURRENT_TIMESTAMP;
+            WHERE 
+                Active = true 
+                AND NextPriceDropAt <= CURRENT_TIMESTAMP;
         ");
+    }
+
+    public async Task DeactivateAsync(Guid id) 
+    {
+        Beverage? beverage = await _beverages.FirstOrDefaultAsync(b => b.Id == id);
+        if (beverage == null) return;
+
+        beverage.Active = false;
+        _beverages.Update(beverage);
+
+        await context.SaveChangesAsync();
     }
 }

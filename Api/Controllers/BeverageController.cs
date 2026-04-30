@@ -10,21 +10,33 @@ public class BeverageController(BeverageService beverageService) : ControllerBas
 {
     private readonly BeverageService _beverageService = beverageService;
 
-    [HttpGet(Name = "Get")]
+    [HttpGet]
     public async Task<List<Beverage>> GetAsync()
     {
         return await _beverageService.GetAsync();
     }
 
-    [HttpPost(Name = "Create")]
+    [HttpGet("{id}")]
+    public async Task<Beverage?> GetByIdAsync(Guid id)
+    {
+        return await _beverageService.GetByIdAsync(id);
+    }
+
+    [HttpPost]
     public async Task CreateAsync(Beverage beverage)
     {
         await _beverageService.CreateAsync(beverage);
     }
 
-    [HttpPut(Name = "Purchase")]
+    [HttpPut("{id}/purchase")]
     public async Task<Beverage> PurchaseAsync(Guid id) 
     {
         return await _beverageService.PurchaseAsync(id);
+    }
+
+    [HttpPut("{id}/deactivate")]
+    public async Task DeactivateAsync(Guid id) 
+    {
+        await _beverageService.DeactivateAsync(id);
     }
 }
