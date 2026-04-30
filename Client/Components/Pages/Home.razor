@@ -19,7 +19,7 @@ else
             <MudTh>Code</MudTh>
             <MudTh>Current Price</MudTh>
             <MudTh>
-                <MudIconButton OnClick="CreateDrinkAsync" Icon="@Icons.Material.Filled.Add" />
+                <MudIconButton OnClick="CreateDrinkAsync" Icon="@Icons.Material.Filled.Add" Color="Color.Success" />
             </MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -27,13 +27,12 @@ else
             <MudTd>@context.Code</MudTd>
             <MudTd>@context.Price.ToString("0.00")</MudTd>
             <MudTd>
-                <MudIconButton Variant="Variant.Filled" Icon="@Icons.Material.Filled.Money" OnClick="@(async () => await PurchaseAsync(context.Id))" />
-                <MudIconButton Variant="Variant.Filled" Color="Color.Error" Icon="@Icons.Material.Filled.Cancel" OnClick="@(async () => await DeactivateAsync(context.Id))" />
+                <MudIconButton Disabled="@(!context.Active)" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Money" OnClick="@(async () => await PurchaseAsync(context.Id))" />
+                <MudIconButton Variant="Variant.Filled" Color="Color.Default" Icon="@Icons.Material.Filled.Cancel" OnClick="@(async () => await DeactivateAsync(context.Id))" />
+                <MudIconButton Variant="Variant.Filled" Color="Color.Error" Icon="@Icons.Material.Filled.Delete" OnClick="@(async () => await DeleteAsync(context.Id))" />
             </MudTd>
         </RowTemplate>
     </MudTable>
-
-    <MudButton OnClick="CreateDrinkAsync">Create Drink</MudButton>
 }
 
 @code {
@@ -46,7 +45,8 @@ else
 
         try
         {
-            ICollection<Beverage> beverages = await ApiClient.GetAsync();
+            ICollection<Beverage> beverages = (await ApiClient.GetAsync()).OrderBy(b => b.Active.ToString()).ToList();
+            
             _beverages = beverages.ToList();
         }
         catch (Exception ex)
@@ -68,7 +68,8 @@ else
             Code = "Test",
             Type = BeverageType.Beer,
             Price = 6.50m,
-            AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ]
+            AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ],
+            Active = true
         };
 
         try 
@@ -107,9 +108,28 @@ else
         try 
         {
             await ApiClient.DeactivateAsync(id);
+
+            Beverage? beverage = _beverages.FirstOrDefault(b => b.Id == id);
+            if (beverage is null) return;
+
+            beverage.Active = false;
+            Snackbar.Add("Successfully deactivated beverage.");
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception exception) 
+        {
+            Snackbar.Add($"Unable to deactivate beverage: {exception}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteAsync(Guid id) 
+    {
+        try 
+        {
+            await ApiClient.DeleteAsync(id);
             int index = _beverages.FindIndex(b => b.Id == id);
             _beverages.RemoveAt(index);
-            Snackbar.Add("Successfully deactivated beverage.");
+            Snackbar.Add("Successfully deleted beverage.");
             StateHasChanged();
         }
         catch (Exception exception) 

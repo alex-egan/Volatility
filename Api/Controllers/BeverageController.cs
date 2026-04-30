@@ -39,4 +39,10 @@ public class BeverageController(BeverageService beverageService) : ControllerBas
     {
         await _beverageService.DeactivateAsync(id);
     }
+
+    [HttpDelete]
+    public async Task DeleteAsync(Guid id)
+    {
+        await _beverageService.DeleteAsync(id);
+    }
 }

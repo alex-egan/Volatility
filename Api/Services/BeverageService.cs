@@ -10,7 +10,6 @@ public class BeverageService(DBContext context)
     public async Task<List<Beverage>> GetAsync() 
     {
         return await _beverages
-            .Where(b => b.Active)
             .ToListAsync();
     }
 
@@ -69,6 +68,16 @@ public class BeverageService(DBContext context)
         beverage.Active = false;
         _beverages.Update(beverage);
 
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Guid id) 
+    {
+        Beverage? beverage = await _beverages.FirstOrDefaultAsync(b => b.Id == id);
+        if (beverage == null) return;
+
+        _beverages.Remove(beverage);
+        
         await context.SaveChangesAsync();
     }
 }
