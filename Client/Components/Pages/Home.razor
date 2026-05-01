@@ -1,5 +1,7 @@
 ﻿@using Client.Api.Generated;
+@using Microsoft.AspNetCore.SignalR.Client
 @using MudBlazor
+@inject NavigationManager NavigationManager
 @inject Net80 ApiClient;
 @inject ISnackbar Snackbar;
 @page "/"
@@ -40,7 +42,7 @@ else
             <MudText Typo="Typo.h4">@_selectedBeverage.Name</MudText>
         </MudContainer>
         <MudContainer Gutters="false" Class="d-flex ma-4">
-            <MudChart T="decimal" ChartType="ChartType.Line" ChartOptions="_options" ChartSeries="_series" />
+            <MudChart @ref="@_chart"  T="decimal" ChartType="ChartType.Line" ChartOptions="_options" ChartSeries="_series" />
         </MudContainer>
     }
 }
@@ -49,6 +51,8 @@ else
     private List<Beverage> _beverages = [];
     private bool _isLoading = true;
     private Beverage? _selectedBeverage = null;
+    private HubConnection? connection;
+    private MudChart<decimal>? _chart = null!;
 
     private LineChartOptions _options = new LineChartOptions()
     {
@@ -58,6 +62,81 @@ else
     };
 
     private List<ChartSeries<decimal>> _series = [];
+
+    protected override async Task OnInitializedAsync() 
+    {
+        connection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("https://localhost:7184/beveragehub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        connection.On<Beverage>("BeverageCreated", async (beverage) =>
+        {
+            if (!_beverages.Any(b => b.Id == beverage.Id)) 
+            {
+                _beverages.Add(beverage);
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+
+        connection.On<Guid, decimal>("BeveragePurchased", async (id, price) => 
+        {
+            await InvokeAsync(() =>
+            {
+                int index = _beverages.FindIndex(b => b.Id == id);
+                if (index != -1)
+                {
+                    _beverages[index].Price = price;
+
+                    if (_selectedBeverage?.Id == id && _chart != null)
+                    {
+                        Console.WriteLine("Updating chart prices.");
+
+                        var series = _series.First();
+                        ChartSeries<decimal> chartSeries = new() 
+                        {
+                            Data = new ChartData<decimal>(series.Data.Append(price).ToList())
+                        };
+
+                        _chart.ChartSeries[0] = chartSeries;
+                        _chart.RebuildChart();
+                    }
+
+                    StateHasChanged();
+                }
+            });
+        });
+
+        connection.On<Dictionary<Guid, decimal>>("PricesDecreased", async (updated) => 
+        {
+            await InvokeAsync(() =>
+            {
+                _beverages = _beverages.Select(b => 
+                {
+                    bool success = updated.TryGetValue(b.Id, out decimal price);
+                    if (success) b.Price = price;
+                    return b;
+                }).ToList();
+
+                if (updated.Any(b => b.Key == _selectedBeverage?.Id) && _chart != null) 
+                {
+                    decimal price = updated[_selectedBeverage!.Id];
+                    var series = _series.First();
+                    ChartSeries<decimal> chartSeries = new() 
+                    {
+                        Data = new ChartData<decimal>(series.Data.Append(price).ToList())
+                    };
+
+                    _chart.ChartSeries[0] = chartSeries;
+                    _chart.RebuildChart();
+                }
+
+                StateHasChanged();
+            });
+        });
+
+        await connection.StartAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) 
     {
@@ -121,7 +200,7 @@ else
                 new() { Name = _selectedBeverage.Name, Data = series }
             ];
 
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception exception) 
         {

@@ -1,10 +1,13 @@
 using Api.Models.Database;
 using Api.Models.Helpers;
+using Api.Hubs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using Api.Models.DTO;
 
 namespace Api.Services;
 
-public class BeverageService(DBContext context) 
+public class BeverageService(DBContext context, IHubContext<BeverageHub> hub) 
 {
     private readonly DbSet<Beverage> _beverages = context.Beverages;
     private readonly DbSet<BeverageEvent> _events = context.BeverageEvents;
@@ -33,6 +36,8 @@ public class BeverageService(DBContext context)
             Price = beverage.Price,
             PerformedOn = DateTime.UtcNow
         };
+
+        await hub.Clients.All.SendAsync("BeverageCreated", beverage);
 
         await _beverages.AddAsync(beverage);
         await _events.AddAsync(@event);
@@ -65,22 +70,30 @@ public class BeverageService(DBContext context)
         await _events.AddAsync(@event);
         await context.SaveChangesAsync();
 
+        await hub.Clients.All.SendAsync("BeveragePurchased", beverage.Id, beverage.Price);
+
         return beverage;
     }
 
     public async Task OnBeverageTimerExpired() 
     {
         Console.WriteLine($"Dropping Prices: {DateTime.Now:MM/dd/yyyy mm:hh:ss tt}");
-        await context.Database.ExecuteSqlRawAsync(@"
+        Dictionary<Guid, decimal> updated = await context.Database.SqlQuery<BeveragePriceResult>($@"
             UPDATE Beverages
             SET 
                 Price = ROUND(Price * 0.9, 2),
                 NextPriceDropAt = datetime(CURRENT_TIMESTAMP, '+10 seconds')
             WHERE 
-                Active = true 
+                Active = true
                 AND NextPriceDropAt <= CURRENT_TIMESTAMP
-                AND Price > 1;
-        ");
+                AND Price > 1
+            RETURNING Id, Price;
+        ").ToDictionaryAsync(b => b.Id, b => b.Price);
+
+        if (updated.Count > 0) 
+        {
+            await hub.Clients.All.SendAsync("PricesDecreased", updated);
+        }
     }
 
     public async Task DeactivateAsync(Guid id) 

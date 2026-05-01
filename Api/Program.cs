@@ -1,3 +1,4 @@
+using Api.Hubs;
 using Api.Models.Database;
 using Api.Services;
 using Api.Workers;
@@ -16,11 +17,15 @@ builder.Services.AddHostedService<BeverageWorker>();
 
 builder.Services.AddScoped<BeverageService>();
 
+builder.Services.AddSignalR();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 builder.Services.AddOpenApiDocument();
 
 var app = builder.Build();
+
+app.MapHub<BeverageHub>("/beveragehub");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
