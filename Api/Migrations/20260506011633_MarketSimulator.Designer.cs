@@ -3,6 +3,7 @@ using System;
 using Api.Models.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Api.Migrations
 {
     [DbContext(typeof(DBContext))]
-    partial class DBContextModelSnapshot : ModelSnapshot
+    [Migration("20260506011633_MarketSimulator")]
+    partial class MarketSimulator
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -28,9 +31,6 @@ namespace Api.Migrations
 
                     b.PrimitiveCollection<string>("AvailableContainers")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("BasePrice")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Code")

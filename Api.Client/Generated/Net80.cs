@@ -721,6 +721,9 @@ namespace Client.Api.Generated
         [Newtonsoft.Json.JsonProperty("code", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Code { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("basePrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public decimal BasePrice { get; set; }
+
         [Newtonsoft.Json.JsonProperty("price", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public decimal Price { get; set; }
 
@@ -729,6 +732,12 @@ namespace Client.Api.Generated
 
         [Newtonsoft.Json.JsonProperty("highPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public decimal HighPrice { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("inventory", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public decimal Inventory { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("inventoryMax", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public decimal InventoryMax { get; set; }
 
         [Newtonsoft.Json.JsonProperty("nextPriceDropAt", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.DateTimeOffset NextPriceDropAt { get; set; }

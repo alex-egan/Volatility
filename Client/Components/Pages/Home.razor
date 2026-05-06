@@ -107,7 +107,7 @@ else
             });
         });
 
-        connection.On<Dictionary<Guid, decimal>>("PricesDecreased", async (updated) => 
+        connection.On<Dictionary<Guid, decimal>>("PricesUpdated", async (updated) => 
         {
             await InvokeAsync(() =>
             {
@@ -166,6 +166,9 @@ else
             Code = "Test",
             Type = BeverageType.Beer,
             Price = 6.50m,
+            LowPrice = 1.50m,
+            HighPrice = 25.0m,
+            BasePrice = 8.0m,
             AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ],
             Active = true
         };

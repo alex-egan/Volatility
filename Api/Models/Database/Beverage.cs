@@ -10,9 +10,14 @@ public partial class Beverage : IBeverage
     public BeverageType Type { get; set; }
     public List<BeverageContainerType> AvailableContainers { get; set; } = [];
     public string Code { get; set; } = string.Empty;
+    public decimal BasePrice { get; set; } = 6.50m;
     public decimal Price { get; set; }
-    public decimal LowPrice { get; set; }
-    public decimal HighPrice { get; set; }
+    public decimal LowPrice { get; set; } = 2.0m;
+    public decimal HighPrice { get; set; } = 20.0m;
+
+    public decimal Inventory { get; set; }
+    public decimal InventoryMax { get; set; }
+
 
     public DateTime NextPriceDropAt { get; set; }
 
