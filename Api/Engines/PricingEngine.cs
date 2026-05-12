@@ -77,7 +77,7 @@ public class PricingEngine
         var priceRatio = (double)(drink.Price / drink.MaxPrice);
 
         var demandEffect =
-            demand * (1 - Math.Pow(priceRatio, 1.5));
+            demand / (1 + Math.Pow(priceRatio, 1.5));
 
         decimal supplyPressure =
             1 - SafeDiv(drink.Inventory, drink.InventoryMax);
@@ -157,20 +157,26 @@ public class PricingEngine
             change = Math.Max(change, minPurchaseStep);
         }
 
-        // soft ceiling (prevents hard plateau)
         decimal softMaxPrice = drink.MaxPrice * softMaxMultiplier;
 
-        // how close we are to soft cap (0 = far, 1+ = beyond cap)
-        decimal ceilingRatio = drink.Price / softMaxPrice;
+        // normalized distance to cap
+        decimal ceilingRatio =
+            drink.Price / softMaxPrice;
 
-        // smooth nonlinear pressure curve
-        decimal ceilingPressure =
-            (decimal)Math.Pow((double)Math.Max(0, ceilingRatio), (double)ceilingExponent);
+        // smooth damping curve
+        decimal ceilingFactor =
+            1m / (
+                1m +
+                ((decimal)Math.Pow(
+                    (double)Math.Max(0, ceilingRatio),
+                    (double)ceilingExponent
+                ) * wCeilingPressure)
+            );
 
-        // only apply pressure when approaching cap meaningfully
-        if (drink.Price > softMaxPrice * 0.6m)
+        // only dampen positive moves
+        if (change > 0)
         {
-            change -= ceilingPressure * wCeilingPressure;
+            change *= ceilingFactor;
         }
 
         Console.WriteLine("----- CHANGE -----");
@@ -179,7 +185,10 @@ public class PricingEngine
         // -------------------------
         // PRICE EVOLUTION (LOG-BASED)
         // -------------------------
+        // absolute safeguard
+        change = Math.Clamp(change, -maxStep, maxStep);
 
+        Console.WriteLine($"Clamped Change: {change}");
         decimal newPrice =
             drink.Price * (decimal)Math.Exp((double)change);
 

@@ -3,7 +3,6 @@ using Api.Models.Helpers;
 using Api.Hubs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
-using Api.Models.DTO;
 using Api.Engines;
 
 namespace Api.Services;
@@ -97,7 +96,7 @@ public class BeverageService(DBContext context, IHubContext<BeverageHub> hub, Ma
 
         Console.WriteLine($"High Price: {beverages.First().HighPrice}");
 
-        var updates = new Dictionary<Guid, decimal>();
+        Dictionary<Guid, decimal> updates = [];
 
         foreach (var b in beverages)
         {
@@ -111,6 +110,14 @@ public class BeverageService(DBContext context, IHubContext<BeverageHub> hub, Ma
                 b.NextPriceDropAt = DateTime.UtcNow.AddSeconds(10);
 
                 updates[b.Id] = newPrice;
+
+                _events.Add(new BeverageEvent
+                {
+                    BeverageId = b.Id,
+                    Type = BeverageEventType.Purchase.Value,
+                    Price = newPrice,
+                    PerformedOn = DateTime.UtcNow
+                });
             }
         }
 
