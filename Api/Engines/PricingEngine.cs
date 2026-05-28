@@ -40,8 +40,8 @@ public class PricingEngine
 
         decimal wCeilingPressure = _config.Get("Pricing", "WCeilingPressure");
         decimal wPurchaseImpulse = _config.Get("Pricing", "WPurchaseImpulse");
+
         decimal softMaxMultiplier = _config.Get("Pricing", "SoftMaxMultiplier");
-        decimal ceilingExponent = _config.Get("Pricing", "CeilingExponent");
         decimal minPurchaseStep = _config.Get("Pricing", "MinPurchaseStep");
 
         Console.WriteLine("----- CONFIG -----");
@@ -50,11 +50,10 @@ public class PricingEngine
         Console.WriteLine($"Volatility: {volatility}, MomentumDecay: {momentumDecay}");
         Console.WriteLine($"MaxStep: {maxStep}, MaxMomentum: {maxMomentum}, MinNoise: {minNoise}");
         Console.WriteLine($"Clamp: {minClamp} - {maxClamp}");
-        Console.WriteLine($"CeilingPressure: {wCeilingPressure}");
-        Console.WriteLine($"Purchase Impulse: {wPurchaseImpulse}");
-        Console.WriteLine($"Soft Max Multiplier: {softMaxMultiplier}");
-        Console.WriteLine($"Ceiling Exponent: {ceilingExponent}");
-        Console.WriteLine($"Min Purchase Step: {minPurchaseStep}");
+        Console.WriteLine($"WCeilingPressure: {wCeilingPressure}");
+        Console.WriteLine($"WPurchaseImpulse: {wPurchaseImpulse}");
+        Console.WriteLine($"SoftMaxMultiplier: {softMaxMultiplier}");
+        Console.WriteLine($"MinPurchaseStep: {minPurchaseStep}");
 
         // -------------------------
         // SMOOTHED DEMAND INPUT
@@ -74,30 +73,44 @@ public class PricingEngine
         // FUNDAMENTAL VALUE
         // -------------------------
 
-        var priceRatio = (double)(drink.Price / drink.MaxPrice);
+        var priceRatio =
+            (double)(drink.Price / drink.MaxPrice);
 
         var demandEffect =
-            demand / (1 + Math.Pow(priceRatio, 1.5));
+            demand / (1 + Math.Pow(priceRatio, 1.2));
 
         decimal supplyPressure =
             1 - SafeDiv(drink.Inventory, drink.InventoryMax);
 
         decimal fairValue =
             drink.BasePrice *
-            (1 + ((decimal)demandEffect * wDemand) - (supplyPressure * wSupply));
+            (
+                1 +
+                ((decimal)demandEffect * wDemand) -
+                (supplyPressure * wSupply)
+            );
 
         Console.WriteLine("----- FUNDAMENTALS -----");
-        Console.WriteLine($"Price: {drink.Price}, FairValue: {fairValue}");
-        Console.WriteLine($"DemandEffect: {demandEffect}, SupplyPressure: {supplyPressure}");
+        Console.WriteLine($"Price: {drink.Price}");
+        Console.WriteLine($"FairValue: {fairValue}");
+        Console.WriteLine($"DemandEffect: {demandEffect}");
+        Console.WriteLine($"SupplyPressure: {supplyPressure}");
 
         // -------------------------
         // MOMENTUM (STATEFUL)
         // -------------------------
 
-        drink.Momentum += (decimal)demandEffect * wMomentum;
-        drink.Momentum *= (1 - momentumDecay);
+        drink.Momentum +=
+            (decimal)demandEffect * wMomentum;
 
-        drink.Momentum = Math.Clamp(drink.Momentum, -maxMomentum, maxMomentum);
+        drink.Momentum *=
+            (1 - momentumDecay);
+
+        drink.Momentum = Math.Clamp(
+            drink.Momentum,
+            -maxMomentum,
+            maxMomentum
+        );
 
         Console.WriteLine("----- MOMENTUM -----");
         Console.WriteLine($"Momentum: {drink.Momentum}");
@@ -111,7 +124,8 @@ public class PricingEngine
 
         drift *= wMeanReversion;
 
-        decimal momentumEffect = drink.Momentum;
+        decimal momentumEffect =
+            drink.Momentum;
 
         decimal baseNoise =
             (decimal)Random.Shared.NextDouble() - 0.5m;
@@ -121,7 +135,9 @@ public class PricingEngine
 
         if (Math.Abs(noise) < minNoise)
         {
-            noise = Math.Sign(noise == 0 ? 1 : noise) * minNoise;
+            noise =
+                Math.Sign(noise == 0 ? 1 : noise)
+                * minNoise;
         }
 
         decimal liquidityDamping =
@@ -135,69 +151,107 @@ public class PricingEngine
         Console.WriteLine($"EventImpact: {eventImpact}");
 
         // -------------------------
-        // TOTAL CHANGE (LOG RETURN)
+        // TOTAL CHANGE
         // -------------------------
 
         decimal change =
-            (drift + momentumEffect + noise + eventImpact)
+            (
+                drift +
+                momentumEffect +
+                noise +
+                eventImpact
+            )
             * liquidityDamping;
+
+        // -------------------------
+        // PURCHASE IMPULSE
+        // -------------------------
 
         if (eventImpact > 0)
         {
             decimal purchaseImpulse =
-                wPurchaseImpulse * (1 + (decimal)Math.Abs(drink.Momentum));
+                wPurchaseImpulse *
+                (1 + Math.Abs(drink.Momentum));
 
-            purchaseImpulse = Math.Max(purchaseImpulse, minPurchaseStep);
+            purchaseImpulse = Math.Max(
+                purchaseImpulse,
+                minPurchaseStep
+            );
 
             change += purchaseImpulse;
         }
 
         if (eventImpact > 0)
         {
-            change = Math.Max(change, minPurchaseStep);
+            change = Math.Max(
+                change,
+                minPurchaseStep
+            );
         }
 
-        decimal softMaxPrice = drink.MaxPrice * softMaxMultiplier;
+        // -------------------------
+        // LOGARITHMIC SOFT CEILING
+        // -------------------------
 
-        // normalized distance to cap
-        decimal ceilingRatio =
+        decimal softMaxPrice =
+            drink.MaxPrice * softMaxMultiplier;
+
+        decimal normalized =
             drink.Price / softMaxPrice;
 
-        // smooth damping curve
-        decimal ceilingFactor =
-            1m / (
-                1m +
-                ((decimal)Math.Pow(
-                    (double)Math.Max(0, ceilingRatio),
-                    (double)ceilingExponent
-                ) * wCeilingPressure)
-            );
+        normalized = Math.Clamp(
+            normalized,
+            0m,
+            5m
+        );
 
-        // only dampen positive moves
+        // logarithmic resistance curve
+        decimal ceilingResistance =
+            (decimal)Math.Log(
+                1.0 + (double)(normalized * normalized)
+            )
+            * wCeilingPressure;
+
+        // only resist upward movement
         if (change > 0)
         {
-            change *= ceilingFactor;
+            change -= ceilingResistance;
         }
 
+        Console.WriteLine("----- SOFT CEILING -----");
+        Console.WriteLine($"SoftMaxPrice: {softMaxPrice}");
+        Console.WriteLine($"Normalized: {normalized}");
+        Console.WriteLine($"CeilingResistance: {ceilingResistance}");
+
         Console.WriteLine("----- CHANGE -----");
-        Console.WriteLine($"Final Change: {change}");
+        Console.WriteLine($"Final Change (pre-clamp): {change}");
+
+        // -------------------------
+        // STEP CLAMP
+        // -------------------------
+
+        change = Math.Clamp(
+            change,
+            -maxStep,
+            maxStep
+        );
+
+        Console.WriteLine($"Clamped Change: {change}");
 
         // -------------------------
         // PRICE EVOLUTION (LOG-BASED)
         // -------------------------
-        // absolute safeguard
-        change = Math.Clamp(change, -maxStep, maxStep);
 
-        Console.WriteLine($"Clamped Change: {change}");
         decimal newPrice =
-            drink.Price * (decimal)Math.Exp((double)change);
+            drink.Price *
+            (decimal)Math.Exp((double)change);
 
         Console.WriteLine("----- PRICE -----");
         Console.WriteLine($"Old Price: {drink.Price}");
-        Console.WriteLine($"New Price (pre-clamp): {newPrice}");
+        Console.WriteLine($"New Price (pre-final clamp): {newPrice}");
 
         // -------------------------
-        // SAFETY CLAMP ONLY
+        // FINAL SAFETY CLAMP
         // -------------------------
 
         decimal finalPrice = Clamp(
