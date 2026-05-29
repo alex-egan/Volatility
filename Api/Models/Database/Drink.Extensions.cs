@@ -1,6 +1,6 @@
 namespace Api.Models.Database;
 
-public partial class Beverage 
+public partial class Drink 
 {
     public void IncreasePrice()
         => Price *= 1.1m;

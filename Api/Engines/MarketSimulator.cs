@@ -11,13 +11,13 @@ public class MarketSimulator
     private readonly EventService _events;
     private readonly PricingEngine _pricing;
 
-    private readonly Dictionary<Guid, DrinkMarketState> _drinks;
+    private readonly Dictionary<Guid, DrinkState> _drinks;
 
     public MarketSimulator(
         BarState bar,
         EventService events,
         PricingEngine pricing,
-        Dictionary<Guid, DrinkMarketState> drinks)
+        Dictionary<Guid, DrinkState> drinks)
     {
         _bar = bar;
         _events = events;
@@ -27,45 +27,27 @@ public class MarketSimulator
 
     public void Tick()
     {
-        var eventImpact = _events.GetImpact();
-
-        foreach (var drink in _drinks.Values)
+        foreach (DrinkState drink in _drinks.Values)
         {
-            Decay(drink);
-
-            drink.Price = _pricing.Calculate(
-                drink,
-                _bar,
-                eventImpact
-            );
+            // Price update
+            drink.Price = _pricing.Calculate(drink, _bar);
+            
+            drink.PurchaseCount = 0;
         }
     }
 
-    public void AddDrink(DrinkMarketState drink)
+    public void Purchase(Guid id) 
     {
-        _drinks[drink.DrinkId] = drink;
+        _drinks[id].PurchaseCount += 1;
     }
 
-    public DrinkMarketState GetDrink(Guid id)
+    public void AddDrink(DrinkState drink)
+    {
+        _drinks[drink.Id] = drink;
+    }
+
+    public DrinkState GetDrink(Guid id)
     {
         return _drinks[id];
-    }
-
-    public void RegisterPurchase(Guid drinkId)
-    {
-        var d = _drinks[drinkId];
-
-        d.OrderVelocity += 1;
-        d.Momentum = (d.Momentum * 0.7m) + 0.3m;
-
-        d.Inventory = Math.Max(0, d.Inventory - 1);
-
-        _bar.UpdateGuests(1);
-    }
-
-    private void Decay(DrinkMarketState drink)
-    {
-        drink.OrderVelocity *= 0.9m;
-        drink.Momentum *= 0.85m;
     }
 }

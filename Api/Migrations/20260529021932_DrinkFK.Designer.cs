@@ -3,6 +3,7 @@ using System;
 using Api.Models.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Api.Migrations
 {
     [DbContext(typeof(DBContext))]
-    partial class DBContextModelSnapshot : ModelSnapshot
+    [Migration("20260529021932_DrinkFK")]
+    partial class DrinkFK
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -87,6 +90,9 @@ namespace Api.Migrations
                     b.Property<decimal>("Inventory")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("InventoryMax")
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("MaxPrice")
                         .HasColumnType("TEXT");
 
@@ -95,6 +101,9 @@ namespace Api.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NextPriceDropAt")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("Price")

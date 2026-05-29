@@ -1,6 +1,6 @@
 namespace Api.Models.Interfaces;
 
-public interface IBeverageSnapshot : IDbEntity, IAuditableEntity 
+public interface IDrinkSnapshot : IDbEntity, IAuditableEntity 
 {
     string Name { get; set; }
     string Code { get; set; }

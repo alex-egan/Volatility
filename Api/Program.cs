@@ -20,12 +20,12 @@ builder.Services.AddSingleton<MarketSimulator>();
 builder.Services.AddSingleton<PricingEngine>();
 builder.Services.AddSingleton<EventService>();
 builder.Services.AddSingleton<BarState>();
-builder.Services.AddSingleton<Dictionary<Guid, DrinkMarketState>>();
+builder.Services.AddSingleton<Dictionary<Guid, DrinkState>>();
 
-builder.Services.AddHostedService<BeverageWorker>();
+builder.Services.AddHostedService<DrinkWorker>();
 builder.Services.AddHostedService<ConfigRefreshService>();
 
-builder.Services.AddScoped<BeverageService>();
+builder.Services.AddScoped<DrinkService>();
 
 builder.Services.AddSignalR();
 
@@ -40,17 +40,17 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<DBContext>();
     var simulator = scope.ServiceProvider.GetRequiredService<MarketSimulator>();
 
-    var beverages = await db.Beverages
+    var drinks = await db.Drinks
         .Where(b => b.Active)
         .ToListAsync();
 
-    foreach (Beverage beverage in beverages)
+    foreach (Drink drink in drinks)
     {
-        simulator.AddDrink(new(beverage));
+        simulator.AddDrink(new(drink));
     }
 }
 
-app.MapHub<BeverageHub>("/beveragehub");
+app.MapHub<DrinkHub>("/drinkhub");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

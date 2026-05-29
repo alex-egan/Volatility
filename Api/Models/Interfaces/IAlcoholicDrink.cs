@@ -1,6 +1,6 @@
 namespace Api.Models.Interfaces;
 
-public interface IAlcoholicBeverage : IBeverage 
+public interface IAlcoholicDrink : IDrink 
 {
     decimal Abv { get; set; }
 }

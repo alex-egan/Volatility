@@ -4,8 +4,8 @@ namespace Api.Models.Database;
 
 public class DBContext(DbContextOptions<DBContext> options) : DbContext(options), IDisposable
 {
-    public DbSet<Beverage> Beverages { get; set; } = null!;
-    public DbSet<BeverageEvent> BeverageEvents { get; set; } = null!;
+    public DbSet<Drink> Drinks { get; set; } = null!;
+    public DbSet<DrinkEvent> DrinkEvents { get; set; } = null!;
     public DbSet<Tab> Tabs { get; set; } = null!;
     public DbSet<Customer> Customers { get; set; } = null!; 
     public DbSet<MarketConfigValue> MarketConfigValues { get; set; } = null!;

@@ -3,7 +3,7 @@ using Api.Models.Interfaces;
 
 namespace Api.Models.Database;
 
-public partial class Beverage : IBeverage
+public partial class Drink : IDrink
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -12,14 +12,11 @@ public partial class Beverage : IBeverage
     public string Code { get; set; } = string.Empty;
     public decimal BasePrice { get; set; } = 6.50m;
     public decimal Price { get; set; }
-    public decimal LowPrice { get; set; } = 2.0m;
-    public decimal HighPrice { get; set; } = 20.0m;
+    public decimal MinPrice { get; set; } = 2.0m;
+    public decimal MaxPrice { get; set; } = 20.0m;
+    public decimal Volatility { get; set; } = 0.05m;
 
     public decimal Inventory { get; set; }
-    public decimal InventoryMax { get; set; }
-
-
-    public DateTime NextPriceDropAt { get; set; }
 
     public bool Active { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
@@ -27,5 +24,5 @@ public partial class Beverage : IBeverage
     public string UpdatedBy { get; set; } = string.Empty;
     public DateTime UpdatedOn { get; set; }
 
-    public List<BeverageEvent> Events { get; set; } = [];
+    public List<DrinkEvent> Events { get; set; } = [];
 }

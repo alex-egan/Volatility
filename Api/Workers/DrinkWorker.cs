@@ -3,7 +3,7 @@ using Api.Services;
 
 namespace Api.Workers;
 
-public class BeverageWorker(IServiceScopeFactory scopeFactory) : BackgroundService
+public class DrinkWorker(IServiceScopeFactory scopeFactory) : BackgroundService
 {
     private IServiceScopeFactory _scopeFactory = scopeFactory;
 
@@ -12,11 +12,11 @@ public class BeverageWorker(IServiceScopeFactory scopeFactory) : BackgroundServi
         while (!stoppingToken.IsCancellationRequested)
         {
             using IServiceScope scope = _scopeFactory.CreateScope();
-            BeverageService service = scope.ServiceProvider.GetRequiredService<BeverageService>();
+            DrinkService service = scope.ServiceProvider.GetRequiredService<DrinkService>();
 
             try
             {
-                await service.OnBeverageTimerExpired();
+                await service.OnDrinkTimerExpired();
             }
             catch (Exception exception)
             {

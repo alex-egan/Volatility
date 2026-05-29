@@ -15,7 +15,7 @@
 }
 else 
 {
-    <MudTable Items="_beverages" OnRowClick="@(async (TableRowClickEventArgs<Beverage> args) => await OpenBeverageAsync(args.Item!.Id))">
+    <MudTable Items="_drinks" OnRowClick="@(async (TableRowClickEventArgs<Drink> args) => await OpenDrinkAsync(args.Item!.Id))">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Code</MudTh>
@@ -36,10 +36,10 @@ else
         </RowTemplate>
     </MudTable>
 
-    @if (_selectedBeverage != null) 
+    @if (_selectedDrink != null) 
     {
         <MudContainer Gutters="false" Class="d-flex flex-column mb-2">
-            <MudText Typo="Typo.h4">@_selectedBeverage.Name</MudText>
+            <MudText Typo="Typo.h4">@_selectedDrink.Name</MudText>
         </MudContainer>
         <MudContainer Gutters="false" Class="d-flex ma-4">
             <MudChart @ref="@_chart"  T="decimal" ChartType="ChartType.Line" ChartOptions="_options" ChartSeries="_series" />
@@ -48,9 +48,9 @@ else
 }
 
 @code {
-    private List<Beverage> _beverages = [];
+    private List<Drink> _drinks = [];
     private bool _isLoading = true;
-    private Beverage? _selectedBeverage = null;
+    private Drink? _selectedDrink = null;
     private HubConnection? connection;
     private MudChart<decimal>? _chart = null!;
 
@@ -66,15 +66,15 @@ else
     protected override async Task OnInitializedAsync() 
     {
         connection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("https://localhost:7184/beveragehub"))
+            .WithUrl(NavigationManager.ToAbsoluteUri("https://localhost:7184/drinkhub"))
             .WithAutomaticReconnect()
             .Build();
 
-        connection.On<Beverage>("BeverageCreated", async (beverage) =>
+        connection.On<Drink>("DrinkCreated", async (beverage) =>
         {
-            if (!_beverages.Any(b => b.Id == beverage.Id)) 
+            if (!_drinks.Any(b => b.Id == beverage.Id)) 
             {
-                _beverages.Add(beverage);
+                _drinks.Add(beverage);
                 await InvokeAsync(StateHasChanged);
             }
         });
@@ -83,12 +83,12 @@ else
         {
             await InvokeAsync(() =>
             {
-                int index = _beverages.FindIndex(b => b.Id == id);
+                int index = _drinks.FindIndex(b => b.Id == id);
                 if (index != -1)
                 {
-                    _beverages[index].Price = price;
+                    _drinks[index].Price = price;
 
-                    if (_selectedBeverage?.Id == id && _chart != null)
+                    if (_selectedDrink?.Id == id && _chart != null)
                     {
                         Console.WriteLine("Updating chart prices.");
 
@@ -111,16 +111,16 @@ else
         {
             await InvokeAsync(() =>
             {
-                _beverages = _beverages.Select(b => 
+                _drinks = _drinks.Select(b => 
                 {
                     bool success = updated.TryGetValue(b.Id, out decimal price);
                     if (success) b.Price = price;
                     return b;
                 }).ToList();
 
-                if (updated.Any(b => b.Key == _selectedBeverage?.Id) && _chart != null) 
+                if (updated.Any(b => b.Key == _selectedDrink?.Id) && _chart != null) 
                 {
-                    decimal price = updated[_selectedBeverage!.Id];
+                    decimal price = updated[_selectedDrink!.Id];
                     var series = _series.First();
                     ChartSeries<decimal> chartSeries = new() 
                     {
@@ -144,8 +144,8 @@ else
 
         try
         {
-            ICollection<Beverage> beverages = (await ApiClient.GetAsync()).OrderBy(b => b.Active.ToString()).ToList();
-            _beverages = beverages.ToList();
+            ICollection<Drink> drinks = (await ApiClient.GetAsync()).OrderBy(b => b.Active.ToString()).ToList();
+            _drinks = drinks.ToList();
         }
         catch (Exception ex)
         {
@@ -159,15 +159,15 @@ else
 
     private async Task CreateDrinkAsync() 
     {
-        Beverage beverage = new() 
+        Drink drink = new() 
         {
             Id = Guid.NewGuid(),
             Name = "Test Beer",
             Code = "Test",
             Type = BeverageType.Beer,
             Price = 6.50m,
-            LowPrice = 1.50m,
-            HighPrice = 25.0m,
+            MinPrice = 1.50m,
+            MaxPrice = 25.0m,
             BasePrice = 8.0m,
             AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ],
             Active = true
@@ -175,7 +175,7 @@ else
 
         try 
         {
-            await ApiClient.CreateAsync(beverage);
+            await ApiClient.CreateAsync(drink);
         }
         catch (Exception exception) 
         {
@@ -184,23 +184,21 @@ else
             return;
         }
         
-        _beverages.Add(beverage);
-        Snackbar.Add($"Beverage {beverage.Name} successfully created.");
+        _drinks.Add(drink);
+        Snackbar.Add($"Beverage {drink.Name} successfully created.");
         StateHasChanged();
     }
 
-    private async Task OpenBeverageAsync(Guid id) 
+    private async Task OpenDrinkAsync(Guid id) 
     {
-        _selectedBeverage = null;
-
         try 
         {
-            _selectedBeverage = await ApiClient.GetByIdAsync(id);
-            IEnumerable<BeverageEvent> events = _selectedBeverage.Events.OrderBy(e => e.PerformedOn);
+            _selectedDrink = await ApiClient.GetByIdAsync(id);
+            IEnumerable<DrinkEvent> events = _selectedDrink.Events.OrderBy(e => e.PerformedOn);
             decimal[] series = events.Select(e => (Math.Truncate(e.Price * 100) / 100)).ToArray();
             
             _series = [
-                new() { Name = _selectedBeverage.Name, Data = series }
+                new() { Name = _selectedDrink.Name, Data = series }
             ];
 
             await InvokeAsync(StateHasChanged);
@@ -215,9 +213,7 @@ else
     {
         try 
         {
-            Beverage updated = await ApiClient.PurchaseAsync(id);
-            int index = _beverages.FindIndex(b => b.Id == updated.Id);
-            _beverages[index] = updated;
+            await ApiClient.PurchaseAsync(id);
             StateHasChanged();
         } 
         catch (Exception exception) 
@@ -232,10 +228,10 @@ else
         {
             await ApiClient.DeactivateAsync(id);
 
-            Beverage? beverage = _beverages.FirstOrDefault(b => b.Id == id);
-            if (beverage is null) return;
+            Drink? drink = _drinks.FirstOrDefault(b => b.Id == id);
+            if (drink is null) return;
 
-            beverage.Active = false;
+            drink.Active = false;
             Snackbar.Add("Successfully deactivated beverage.");
             await InvokeAsync(StateHasChanged);
         }
@@ -250,8 +246,8 @@ else
         try 
         {
             await ApiClient.DeleteAsync(id);
-            int index = _beverages.FindIndex(b => b.Id == id);
-            _beverages.RemoveAt(index);
+            int index = _drinks.FindIndex(b => b.Id == id);
+            _drinks.RemoveAt(index);
             Snackbar.Add("Successfully deleted beverage.");
             StateHasChanged();
         }
