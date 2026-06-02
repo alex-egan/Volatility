@@ -54,6 +54,18 @@ public class PricingEngine
 
         decimal purchasePressure =
             CalculateWeightedPressure(drink.ExpectedPurchaseCount, drink.PurchaseCount, wPurchasePressure);
+        
+        // PURCHASE MOMENTUM
+        //  Average Purchase Pressure over the past 5 intervals
+        //  Smooths the pricing
+        drink.PurchaseMomentum.Enqueue(purchasePressure);
+        while (drink.PurchaseMomentum.Count > 5)
+        {
+            drink.PurchaseMomentum.Dequeue();
+        }
+
+        decimal momentum =
+            drink.PurchaseMomentum.Average();
 
         decimal customerPressure =
             CalculateWeightedPressure(bar.ExpectedCustomerCount, bar.CustomerCount, wCustomerPressure);
@@ -62,7 +74,7 @@ public class PricingEngine
             CalculateWeightedPressure(bar.ExpectedEventMultiplier, bar.EventMultiplier, wEventPressure);
 
         decimal demand =
-            purchasePressure +
+            momentum +
             customerPressure +
             eventPressure;
 

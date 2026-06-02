@@ -79,35 +79,7 @@ else
             }
         });
 
-        connection.On<Guid, decimal>("BeveragePurchased", async (id, price) => 
-        {
-            await InvokeAsync(() =>
-            {
-                int index = _drinks.FindIndex(b => b.Id == id);
-                if (index != -1)
-                {
-                    _drinks[index].Price = price;
-
-                    if (_selectedDrink?.Id == id && _chart != null)
-                    {
-                        Console.WriteLine("Updating chart prices.");
-
-                        var series = _series.First();
-                        ChartSeries<decimal> chartSeries = new() 
-                        {
-                            Data = new ChartData<decimal>(series.Data.Append(price).ToList())
-                        };
-
-                        _chart.ChartSeries[0] = chartSeries;
-                        _chart.RebuildChart();
-                    }
-
-                    StateHasChanged();
-                }
-            });
-        });
-
-        connection.On<Dictionary<Guid, decimal>>("PricesUpdated", async (updated) => 
+        connection.On<Dictionary<Guid, decimal>>("UpdatePrices", async (updated) => 
         {
             await InvokeAsync(() =>
             {
