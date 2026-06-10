@@ -26,7 +26,6 @@ public class PricingEngine
         //-----------------------------------
         // CONFIGURATION WEIGHTS
         //-----------------------------------
-
         // These weights define how strongly each factor influences demand/supply imbalance.
         // They act as "market sensitivity coefficients".
         decimal wPurchasePressure = _config.Get("Pricing", "wPurchasePressure");
@@ -140,61 +139,38 @@ public class PricingEngine
             (drink.Price - drink.MinPrice) /
             (drink.MaxPrice - drink.MinPrice);
 
-        decimal positionResistance =
-            1 - (decimal)Math.Pow((double)Math.Abs(pricePosition - 0.5m) * 2, 2);
+        decimal upwardResistance =
+            (decimal)Math.Pow((double)pricePosition, 2);
+
+        decimal downwardResistance =
+            (decimal)Math.Pow((double)(1m - pricePosition), 2);
+
+        decimal resistance =
+            imbalance > 0
+                ? 1m - upwardResistance
+                : 1m - downwardResistance;
 
         _logger.LogDebug(
             "Position Resistance | PricePosition={PricePosition} Resistance={Resistance}",
             pricePosition,
-            positionResistance);
-
-        //-----------------------------------
-        // CEILING RESISTANCE (SOFT BOUNDARY)
-        //-----------------------------------
-        // Replaces hard max price.
-        // As price exceeds expected range, resistance grows exponentially.
-
-        decimal distanceFromMax =
-            drink.Price - drink.MaxPrice;
-
-        decimal ceilingResistance =
-            (decimal)Math.Exp(
-                (double)Math.Abs(distanceFromMax / drink.MaxPrice) * 3
-            );
-
-        _logger.LogDebug(
-            "Ceiling Resistance | DistanceFromMax={Overshoot} Resistance={Resistance}",
-            distanceFromMax,
-            ceilingResistance);
-
-        //-----------------------------------
-        // COMBINED RESISTANCE MODEL
-        //-----------------------------------
-        // Position resistance controls mid-range stability.
-        // Ceiling resistance controls extreme growth friction.
-
-        decimal totalResistance =
-            positionResistance * (2m - Math.Min(ceilingResistance, 1.5m));
+            resistance);
 
         _logger.LogWarning(
             "DEBUG STATE | Demand={Demand} Supply={Supply} Imbalance={Imbalance} Resistance={Resistance} Volatility={Volatility}",
             demand,
             supply,
             imbalance,
-            totalResistance,
+            resistance,
             drink.Volatility);
 
         //-----------------------------------
         // RAW PRICE MOVEMENT (DELTA)
         //-----------------------------------
-        // decimal delta =
-        //     imbalance *
-        //     totalResistance *
-        //     drink.Volatility *
-        //     drink.BasePrice;
 
-        decimal delta =
-            imbalance * totalResistance * drink.Volatility * drink.BasePrice;
+        decimal delta = imbalance 
+            * resistance 
+            * drink.Volatility 
+            * drink.BasePrice;
 
         _logger.LogInformation(
             "Delta (Pre-MeanReversion) | Delta={Delta}",
