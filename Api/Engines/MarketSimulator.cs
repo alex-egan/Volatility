@@ -29,10 +29,11 @@ public class MarketSimulator
     {
         foreach (DrinkState drink in _drinks.Values)
         {
-            // Price update
-            drink.Price = _pricing.Calculate(drink, _bar);
-            
-            drink.PurchaseCount = 0;
+            try {
+                drink.Price = _pricing.Calculate(drink, _bar);
+                drink.PurchaseCount = 0;
+            }
+            catch (Exception) {}
         }
     }
 
