@@ -51,6 +51,7 @@ else
     private List<Drink> _drinks = [];
     private bool _isLoading = true;
     private Drink? _selectedDrink = null;
+    private Queue<decimal> _priceHistory = new();
     private HubConnection? connection;
     private MudChart<decimal>? _chart = null!;
 
@@ -94,9 +95,13 @@ else
                 {
                     decimal price = updated[_selectedDrink!.Id];
                     var series = _series.First();
+
+                    _priceHistory.Dequeue();
+                    _priceHistory.Enqueue(price);
+
                     ChartSeries<decimal> chartSeries = new() 
                     {
-                        Data = new ChartData<decimal>(series.Data.Append(price).ToList())
+                        Data = new ChartData<decimal>(_priceHistory.ToList())
                     };
 
                     _chart.ChartSeries[0] = chartSeries;
@@ -163,12 +168,19 @@ else
 
     private async Task OpenDrinkAsync(Guid id) 
     {
+        _priceHistory = new();
+
         try 
         {
             _selectedDrink = await ApiClient.GetByIdAsync(id);
             IEnumerable<DrinkEvent> events = _selectedDrink.Events.OrderBy(e => e.PerformedOn);
-            decimal[] series = events.Select(e => (Math.Truncate(e.Price * 100) / 100)).ToArray();
+            decimal[] series = events.Skip(events.Count() - 50).Select(e => (Math.Truncate(e.Price * 100) / 100)).ToArray();
             
+            foreach (decimal price in series) 
+            {
+                _priceHistory.Enqueue(price);
+            }
+
             _series = [
                 new() { Name = _selectedDrink.Name, Data = series }
             ];
