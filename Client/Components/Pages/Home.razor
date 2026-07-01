@@ -44,6 +44,14 @@ else
         <MudContainer Gutters="false" Class="d-flex ma-4">
             <MudChart @ref="@_chart"  T="decimal" ChartType="ChartType.Line" ChartOptions="_options" ChartSeries="_series" />
         </MudContainer>
+        <MudContainer Class="mt-2">
+            <MudText>Current Click Count: @_clickCount</MudText>
+
+            <MudText>Click Count History</MudText>
+            @foreach (int count in _clickCounts) {
+                <MudText>@count</MudText>
+            }
+        </MudContainer>
     }
 }
 
@@ -54,6 +62,8 @@ else
     private Queue<decimal> _priceHistory = new();
     private HubConnection? connection;
     private MudChart<decimal>? _chart = null!;
+    private int _clickCount = 0;
+    private List<int> _clickCounts = [];
 
     private LineChartOptions _options = new LineChartOptions()
     {
@@ -93,6 +103,8 @@ else
 
                 if (updated.Any(b => b.Key == _selectedDrink?.Id) && _chart != null) 
                 {
+                    _clickCounts.Add(_clickCount);
+
                     decimal price = updated[_selectedDrink!.Id];
                     var series = _series.First();
 
@@ -147,7 +159,8 @@ else
             MaxPrice = 25.0m,
             BasePrice = 8.0m,
             AvailableContainers = [ BeverageContainerType.Can, BeverageContainerType.Draft ],
-            Active = true
+            Active = true,
+            Volatility = 2.0m
         };
 
         try 
@@ -175,7 +188,10 @@ else
             _selectedDrink = await ApiClient.GetByIdAsync(id);
             IEnumerable<DrinkEvent> events = _selectedDrink.Events.OrderBy(e => e.PerformedOn);
             decimal[] series = events.Skip(events.Count() - 50).Select(e => (Math.Truncate(e.Price * 100) / 100)).ToArray();
-            
+
+            _clickCount = 0;
+            _clickCounts = [];
+
             foreach (decimal price in series) 
             {
                 _priceHistory.Enqueue(price);
@@ -198,6 +214,7 @@ else
         try 
         {
             await ApiClient.PurchaseAsync(id);
+            _clickCount++;
             StateHasChanged();
         } 
         catch (Exception exception) 

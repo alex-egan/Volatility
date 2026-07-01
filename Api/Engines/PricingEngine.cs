@@ -3,16 +3,10 @@ using Api.Services;
 
 namespace Api.Engines;
 
-public class PricingEngine
+public class PricingEngine(ILogger<PricingEngine> logger, IMarketConfigService config)
 {
-    private readonly ILogger<PricingEngine> _logger;
-    private readonly IMarketConfigService _config;
-
-    public PricingEngine(ILogger<PricingEngine> logger, IMarketConfigService config)
-    {
-        _logger = logger;
-        _config = config;
-    }
+    private readonly ILogger<PricingEngine> _logger = logger;
+    private readonly IMarketConfigService _config = config;
 
     public decimal Calculate(
         DrinkState drink,
@@ -64,7 +58,8 @@ public class PricingEngine
         }
 
         decimal momentum =
-            drink.PurchaseMomentum.Average();
+            drink.PurchaseMomentum.Average() * 0.6m +
+            purchasePressure * 0.4m;
 
         decimal customerPressure =
             CalculateWeightedPressure(bar.ExpectedCustomerCount, bar.CustomerCount, wCustomerPressure);
@@ -172,6 +167,13 @@ public class PricingEngine
             * drink.Volatility 
             * drink.BasePrice;
 
+        //-----------------------------------
+        // Increase vs. Decrease Multiplier
+        //-----------------------------------
+        // delta = delta > 0
+        //     ? 10 * delta
+        //     : .5m * delta;
+
         _logger.LogInformation(
             "Delta (Pre-MeanReversion) | Delta={Delta}",
             delta);
@@ -197,14 +199,15 @@ public class PricingEngine
         return finalPrice;
     }
 
-    private decimal CalculateWeightedPressure(decimal expected, decimal actual, decimal weight) {
+    private static decimal CalculateWeightedPressure(decimal expected, decimal actual, decimal weight) 
+    {
         return CalculateMetricPressure(expected, actual) * weight;
     }
 
-    private decimal CalculateMetricPressure(decimal expected, decimal actual) 
+    private static decimal CalculateMetricPressure(decimal expected, decimal actual) 
     {
-        decimal ratio = SafeDivide(actual - expected, actual);
-        return Math.Round(ratio, 2);
+        decimal ratio = SafeDivide(actual - expected, expected);
+        return ratio;
     }
 
     public static decimal SafeDivide(
@@ -212,7 +215,7 @@ public class PricingEngine
         decimal denominator,
         decimal fallback = 0m)
     {
-        if (denominator == 0m)
+        if (denominator <= 0m)
             return fallback;
 
         return numerator / denominator;

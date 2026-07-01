@@ -10,6 +10,7 @@ public class MarketSimulator
     private readonly BarState _bar;
     private readonly EventService _events;
     private readonly PricingEngine _pricing;
+    private ILogger<MarketSimulator> _logger;
 
     private readonly Dictionary<Guid, DrinkState> _drinks;
 
@@ -17,23 +18,32 @@ public class MarketSimulator
         BarState bar,
         EventService events,
         PricingEngine pricing,
+        ILogger<MarketSimulator> logger,
         Dictionary<Guid, DrinkState> drinks)
     {
         _bar = bar;
         _events = events;
         _pricing = pricing;
         _drinks = drinks;
+        _logger = logger;
     }
 
     public void Tick()
     {
         foreach (DrinkState drink in _drinks.Values)
         {
-            try {
+            try 
+            {
                 drink.Price = _pricing.Calculate(drink, _bar);
                 drink.PurchaseCount = 0;
             }
-            catch (Exception) {}
+            catch (Exception exception) 
+            {
+                _logger.LogError(
+                    "=== EXCEPTION IN CALCULATE METHOD | Exception={Message} | Price={StackTrace} ===",
+                    exception.Message,
+                    exception.StackTrace);
+            }
         }
     }
 
