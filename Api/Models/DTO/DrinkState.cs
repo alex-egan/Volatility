@@ -15,6 +15,7 @@ public class DrinkState
     public decimal ExpectedInventory { get; set; } = 1.0m;
 
     public int PurchaseCount { get; set; }
+    public Queue<int> PurchaseHistory { get; set; } = [];
     public int ExpectedPurchaseCount { get; set; } = 1;
 
     /// <summary>
